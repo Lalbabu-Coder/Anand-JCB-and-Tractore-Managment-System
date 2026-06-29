@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { tractorWorkSchema } from "@/lib/validation";
-import { generateAndUploadReceipt } from "@/lib/pdf-generator";
+
 import { sendSMS, sendWhatsApp, parseTemplate } from "@/lib/twilio";
 
 async function checkAuth(allowedRoles?: string[]) {
@@ -96,44 +96,16 @@ export async function createTractorWork(data: any) {
     const merchantSetting = await prisma.setting.findUnique({ where: { key: "UPI_MERCHANT_NAME" } });
     const smsTemplateSetting = await prisma.setting.findUnique({ where: { key: "SMS_TEMPLATE_TRACTOR" } });
 
-    // 4. Generate PDF receipt and upload
-    let pdfUrl = "";
+    // 4. Set relative API route URL for PDF receipt
+    const pdfUrl = `/api/receipts?id=${work.id}&type=TRACTOR`;
     try {
-      pdfUrl = await generateAndUploadReceipt({
-        receiptId: work.id.substring(0, 8).toUpperCase(),
-        type: "TRACTOR",
-        customer: {
-          name: customer.name,
-          mobile: customer.mobile,
-          village: customer.village,
-          address: customer.address,
-        },
-        workDetails: {
-          date: new Date(validated.date).toLocaleDateString(),
-          operatorName: validated.operatorName,
-          notes: validated.notes,
-          operations: operationsToCreate,
-          extraCharges: {
-            driverCharge: validated.driverCharge,
-            helperCharge: validated.helperCharge,
-            foodExpense: validated.foodExpense,
-            otherExpense: validated.otherExpense,
-          },
-          totalAmount,
-          advancePaid: validated.advancePaid,
-          remainingBalance,
-        },
-        upiId: upiIdSetting?.value,
-        merchantName: merchantSetting?.value,
-      });
-
       // Update TractorWork with pdfUrl
       await prisma.tractorWork.update({
         where: { id: work.id },
         data: { pdfUrl }
       });
     } catch (pdfErr) {
-      console.error("Failed to generate PDF for work:", pdfErr);
+      console.error("Failed to update pdfUrl for work:", pdfErr);
     }
 
     // 5. Send notifications (SMS & WhatsApp)
@@ -184,7 +156,9 @@ export async function createTractorWork(data: any) {
       },
     });
 
-    const waRes = await sendWhatsApp(customer.mobile, smsBody, pdfUrl || undefined);
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const absolutePdfUrl = pdfUrl ? `${baseUrl}${pdfUrl}` : undefined;
+    const waRes = await sendWhatsApp(customer.mobile, smsBody, absolutePdfUrl);
     if (waRes.success) {
       waSent = true;
       await prisma.notification.update({

@@ -3,7 +3,7 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { ReceiptPDF, ReceiptPDFProps } from "@/components/ReceiptPDF";
 import { uploadReceiptPDF } from "@/lib/cloudinary";
 
-export async function generateAndUploadReceipt(props: Omit<ReceiptPDFProps, "qrCodeDataUrl"> & { upiId?: string; merchantName?: string }): Promise<string> {
+export async function generateReceiptBuffer(props: Omit<ReceiptPDFProps, "qrCodeDataUrl"> & { upiId?: string; merchantName?: string }): Promise<Buffer> {
   const { upiId, merchantName, ...restProps } = props;
 
   // 1. Generate UPI Payment URL & QR Code API Link
@@ -16,14 +16,18 @@ export async function generateAndUploadReceipt(props: Omit<ReceiptPDFProps, "qrC
   }
 
   // 2. Render PDF to Buffer
-  try {
-    const doc = React.createElement(ReceiptPDF, {
-      ...restProps,
-      qrCodeDataUrl: qrCodeUrl || undefined,
-    });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const buffer = await renderToBuffer(doc as any);
+  const doc = React.createElement(ReceiptPDF, {
+    ...restProps,
+    qrCodeDataUrl: qrCodeUrl || undefined,
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return await renderToBuffer(doc as any);
+}
 
+export async function generateAndUploadReceipt(props: Omit<ReceiptPDFProps, "qrCodeDataUrl"> & { upiId?: string; merchantName?: string }): Promise<string> {
+  try {
+    console.log(`Generating receipt buffer for ${props.type} (ID: ${props.receiptId})...`);
+    const buffer = await generateReceiptBuffer(props);
     const fileName = `receipt_${props.type.toLowerCase()}_${props.receiptId}.pdf`;
 
     // 3. Upload buffer (Cloudinary or local filesystem fallback)

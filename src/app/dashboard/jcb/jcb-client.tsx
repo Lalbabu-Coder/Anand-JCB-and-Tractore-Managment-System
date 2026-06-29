@@ -52,7 +52,7 @@ export function JCBClient({
 }: JCBClientProps) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
-  const [successInfo, setSuccessInfo] = useState<{ pdfUrl: string; smsSent: boolean } | null>(null);
+  const [successInfo, setSuccessInfo] = useState<{ workId: string; smsSent: boolean } | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const {
@@ -135,7 +135,7 @@ export function JCBClient({
 
     if (res.success) {
       setSuccessInfo({
-        pdfUrl: res.pdfUrl || "",
+        workId: res.work?.id || "",
         smsSent: res.notifications?.smsSent || false,
       });
       reset({
@@ -194,9 +194,9 @@ export function JCBClient({
                 ? "Outbound receipt SMS/WhatsApp alerts have been sent to the customer."
                 : "Failed to dispatch SMS (Twilio configured/sandbox settings might limit this)."}
             </p>
-            {successInfo.pdfUrl && (
+            {successInfo.workId && (
               <a
-                href={successInfo.pdfUrl}
+                href={`/api/receipts?id=${successInfo.workId}&type=JCB`}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-600/20 border border-emerald-500/30 px-4 py-2 font-bold text-emerald-400 hover:bg-emerald-500/30 text-xs transition-colors shadow-sm"
@@ -382,18 +382,14 @@ export function JCBClient({
                     <td className="py-4 px-4 text-right font-medium text-emerald-500">₹{log.advancePaid.toLocaleString()}</td>
                     <td className="py-4 px-4 text-right font-bold text-amber-500">₹{log.remainingBalance.toLocaleString()}</td>
                     <td className="py-4 px-4 text-center">
-                      {log.pdfUrl ? (
-                        <a
-                          href={log.pdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-400 hover:bg-violet-500/20 transition-colors"
-                        >
-                          <FileText className="h-3 w-3" /> PDF
-                        </a>
-                      ) : (
-                        <span className="text-[10px] text-zinc-600 font-bold uppercase tracking-wider">—</span>
-                      )}
+                      <a
+                        href={`/api/receipts?id=${log.id}&type=JCB`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-400 hover:bg-violet-500/20 transition-colors"
+                      >
+                        <FileText className="h-3 w-3" /> PDF
+                      </a>
                     </td>
                     {isAdmin && (
                       <td className="py-4 px-4 text-center rounded-r-xl">

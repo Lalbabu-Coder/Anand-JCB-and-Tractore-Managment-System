@@ -285,18 +285,14 @@ export function CustomerDetailsClient({
                     <span className="text-xl font-extrabold text-white">₹{item.totalAmount.toLocaleString()}</span>
                   </div>
                   <div className="flex gap-2">
-                    {item.pdfUrl ? (
-                      <a
-                        href={item.pdfUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-bold text-violet-400 hover:bg-violet-500/20 transition-colors"
-                      >
-                        <FileText className="h-4 w-4" /> View PDF
-                      </a>
-                    ) : (
-                      <span className="text-[10px] font-bold tracking-wider uppercase text-zinc-600 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800">No Receipt</span>
-                    )}
+                    <a
+                      href={`/api/receipts?id=${item.id}&type=${item.itemType}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 px-3 py-1.5 text-xs font-bold text-violet-400 hover:bg-violet-500/20 transition-colors"
+                    >
+                      <FileText className="h-4 w-4" /> View PDF
+                    </a>
                   </div>
                 </div>
               </div>

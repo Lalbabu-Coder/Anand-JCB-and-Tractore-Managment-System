@@ -20,11 +20,45 @@ if (isCloudinaryConfigured) {
  * @returns The URL of the saved file
  */
 export async function uploadReceiptPDF(buffer: Buffer, fileName: string): Promise<string> {
-  // Cloudinary blocks PDF delivery by default on new accounts (returns HTTP 401).
-  // To prevent the user from getting stuck, we force local storage.
-  // The PDF will be saved to public/receipts/ and served natively by Next.js.
+  // Save locally in development mode to bypass Cloudinary PDF restrictions on localhost
+  if (process.env.NODE_ENV === "development") {
+    console.log(`Development mode: Saving PDF receipt ${fileName} locally...`);
+    return saveLocally(buffer, fileName);
+  }
+
+  if (isCloudinaryConfigured) {
+    try {
+      console.log(`Uploading PDF receipt ${fileName} to Cloudinary...`);
+      return await new Promise<string>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: "receipts",
+            resource_type: "image",
+            public_id: path.parse(fileName).name,
+            format: "pdf",
+          },
+          (error, result) => {
+            if (error) {
+              console.error("Cloudinary PDF upload failed:", error);
+              reject(error);
+            } else if (result) {
+              resolve(result.secure_url);
+            } else {
+              reject(new Error("Cloudinary upload returned empty result"));
+            }
+          }
+        );
+        uploadStream.end(buffer);
+      });
+    } catch (error) {
+      console.error("Cloudinary PDF upload failed, trying local fallback:", error);
+    }
+  }
+
+  // Fallback to local storage (works locally, will fail on read-only serverless if Cloudinary fails)
   return saveLocally(buffer, fileName);
 }
+
 
 async function saveLocally(buffer: Buffer, fileName: string): Promise<string> {
   const dirPath = path.join(process.cwd(), "public", "receipts");
