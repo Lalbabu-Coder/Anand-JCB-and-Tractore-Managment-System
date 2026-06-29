@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
       console.log(`[PDF API] PDF generated successfully. Buffer size: ${buffer.length} bytes.`);
       
-      return new NextResponse(buffer, {
+      return new Response(buffer as any, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `inline; filename="receipt_tractor_${work.id.substring(0, 8).toUpperCase()}.pdf"`,
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
 
       console.log(`[PDF API] PDF generated successfully. Buffer size: ${buffer.length} bytes.`);
 
-      return new NextResponse(buffer, {
+      return new Response(buffer as any, {
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `inline; filename="receipt_jcb_${work.id.substring(0, 8).toUpperCase()}.pdf"`,
