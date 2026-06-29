@@ -1,0 +1,199 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 224 71.4% 4.1%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 262.1 83.3% 57.8%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14.3% 95.9%;
+    --secondary-foreground: 220.9 39.3% 11%;
+    --muted: 220 14.3% 95.9%;
+    --muted-foreground: 220 8.9% 46.1%;
+    --accent: 262.1 83.3% 57.8%;
+    --accent-foreground: 220.9 39.3% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 262.1 83.3% 57.8%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 240 10% 4%; /* Dark, rich background */
+    --foreground: 0 0% 98%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    
+    /* Vibrant Violet for primary actions */
+    --primary: 263.4 70% 50.4%;
+    --primary-foreground: 210 20% 98%;
+    
+    /* Subtle secondary elements */
+    --secondary: 240 6% 10%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 6% 10%;
+    --muted-foreground: 240 5% 65%;
+    
+    --accent: 263.4 70% 50.4%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 6% 15%;
+    --input: 240 6% 15%;
+    --ring: 263.4 70% 50.4%;
+  }
+}
+
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: var(--font-outfit), sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  
+  /* Add subtle background gradient for premium feel */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.03), transparent 25%);
+  background-attachment: fixed;
+}
+
+/* Glassmorphism Styles */
+.glass-panel {
+  background: rgba(24, 24, 27, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.light .glass-panel {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+}
+
+/* Modern inputs and buttons */
+input, select, textarea {
+  transition: all 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* PREMIUM LIGHT MODE FIXES FOR HARDCODED ZINC UTILITIES */
+.light {
+  color: #1e293b !important; /* slate-800 */
+}
+.light body {
+  background-color: #f8fafc !important; /* slate-50 */
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(245, 158, 11, 0.05), transparent 25%) !important;
+}
+
+/* Invert Text to Modern Slate Colors */
+.light .text-white:not(button):not(a) { color: #0f172a !important; } /* slate-900 */
+.light .text-zinc-100 { color: #1e293b !important; } /* slate-800 */
+.light .text-zinc-300 { color: #334155 !important; } /* slate-700 */
+.light .text-zinc-400 { color: #64748b !important; } /* slate-500 */
+.light .text-zinc-500 { color: #94a3b8 !important; } /* slate-400 */
+
+/* Premium Light Backgrounds (Cards & Panels) */
+.light .bg-zinc-950 { background-color: #f8fafc !important; }
+.light .bg-zinc-900 { background-color: #ffffff !important; }
+.light .glass-panel,
+.light .bg-zinc-900\/20, 
+.light .bg-zinc-900\/30, 
+.light .bg-zinc-900\/50 { 
+  background-color: #ffffff !important; 
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.04) !important;
+  backdrop-filter: blur(12px) !important;
+}
+.light .bg-zinc-950\/30, .light .bg-zinc-950\/50 { 
+  background-color: #f1f5f9 !important; /* slate-100 */
+}
+.light .bg-zinc-950\/95 { 
+  background-color: rgba(255, 255, 255, 0.95) !important; 
+}
+.light .bg-zinc-800\/30, .light .bg-zinc-800\/40, .light .bg-zinc-800\/50 { 
+  background-color: #f1f5f9 !important; 
+}
+
+/* Soft Light Borders */
+.light .border-zinc-900\/50, 
+.light .border-zinc-800, 
+.light .border-zinc-800\/50, 
+.light .border-zinc-700 { 
+  border-color: #e2e8f0 !important; /* slate-200 */
+}
+
+/* Subtle Hover States */
+.light .hover\:bg-zinc-800\/30:hover, 
+.light .hover\:bg-zinc-800\/40:hover, 
+.light .hover\:bg-zinc-800\/50:hover, 
+.light .hover\:bg-zinc-900\/60:hover { 
+  background-color: #f1f5f9 !important; 
+  color: #0f172a !important;
+}
+.light .hover\:text-white:hover { color: #0f172a !important; }

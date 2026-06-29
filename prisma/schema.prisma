@@ -1,0 +1,181 @@
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  ACCOUNTANT
+}
+
+enum MachineType {
+  JCB
+  TRACTOR
+}
+
+enum TractorWorkType {
+  PLOUGHING
+  ROTAVATOR
+  CULTIVATOR
+  SEED_DRILL
+  TROLLEY
+  LEVELER
+  OTHERS
+  HAL_JOTAI
+  TAWA_JOTAI
+  HARROW
+  PUDDLING
+  SOIL_FILLING
+  SAND_TRANSPORT
+  BRICK_TRANSPORT
+  FERTILIZER_SPREADING
+  WATER_TANK_SUPPLY
+  TROLLEY_TRANSPORT
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  BANK
+}
+
+model User {
+  id           String   @id @default(uuid()) @map("_id")
+  name         String
+  email        String   @unique
+  passwordHash String
+  profilePic   String?
+  role         Role     @default(OPERATOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Customer {
+  id           String        @id @default(uuid()) @map("_id")
+  name         String
+  mobile       String        @unique
+  village      String
+  address      String?
+  image        String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  jcbWorks     JCBWork[]
+  tractorWorks TractorWork[]
+  payments     Payment[]
+}
+
+model Machine {
+  id           String        @id @default(uuid()) @map("_id")
+  name         String
+  type         MachineType
+  image        String?
+  status       String        @default("ACTIVE") // ACTIVE, MAINTENANCE, INACTIVE
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  jcbWorks     JCBWork[]
+  tractorWorks TractorWork[]
+}
+
+model JCBWork {
+  id               String   @id @default(uuid()) @map("_id")
+  customerId       String
+  customer         Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  machineId        String
+  machine          Machine  @relation(fields: [machineId], references: [id])
+  date             DateTime @default(now())
+  startTime        DateTime
+  endTime          DateTime
+  totalHours       Float
+  ratePerHour      Float
+  totalAmount      Float
+  dieselCost       Float    @default(0)
+  operatorName     String
+  advancePaid      Float    @default(0)
+  remainingBalance Float
+  notes            String?
+  pdfUrl           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model TractorWork {
+  id               String             @id @default(uuid()) @map("_id")
+  customerId       String
+  customer         Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  machineId        String
+  machine          Machine            @relation(fields: [machineId], references: [id])
+  date             DateTime           @default(now())
+  driverCharge     Float?
+  helperCharge     Float?
+  foodExpense      Float?
+  otherExpense     Float?
+  dieselCost       Float              @default(0)
+  totalAmount      Float
+  advancePaid      Float              @default(0)
+  remainingBalance Float
+  operatorName     String
+  notes            String?
+  pdfUrl           String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  operations       TractorOperation[]
+}
+
+model TractorOperation {
+  id             String          @id @default(uuid()) @map("_id")
+  tractorWorkId  String
+  tractorWork    TractorWork     @relation(fields: [tractorWorkId], references: [id], onDelete: Cascade)
+  workType       TractorWorkType
+  area           Float?
+  ratePerArea    Float?
+  landUnit       String          @default("Bigha")
+  numberOfPasses Int?
+  pricingMethod  String          @default("RATE_PER_UNIT")
+  tripCount      Int?
+  ratePerTrip    Float?
+  amount         Float
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Payment {
+  id               String        @id @default(uuid()) @map("_id")
+  customerId       String
+  customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount           Float
+  method           PaymentMethod
+  referenceId      String?       // reference ID or trans ID for UPI/Bank
+  notes            String?
+  date             DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+
+
+model Notification {
+  id          String    @id @default(uuid()) @map("_id")
+  customerId  String
+  type        String    // SMS or WHATSAPP
+  content     String
+  scheduledAt DateTime  @default(now())
+  sentAt      DateTime?
+  status      String    @default("PENDING") // PENDING, SENT, FAILED
+  createdAt   DateTime  @default(now())
+}
+
+model Setting {
+  id          String   @id @default(uuid()) @map("_id")
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
