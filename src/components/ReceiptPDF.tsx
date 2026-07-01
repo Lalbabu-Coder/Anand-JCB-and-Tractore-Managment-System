@@ -249,6 +249,10 @@ export interface ReceiptPDFProps {
     totalHours?: number;
     ratePerHour?: number;
     dieselCost?: number;
+    workType?: string;
+    pricingMethod?: string;
+    tripCount?: number;
+    ratePerTrip?: number;
     
     // Tractor specific (Array of operations)
     operations?: any[];
@@ -349,14 +353,32 @@ export const ReceiptPDF: React.FC<ReceiptPDFProps> = ({
           {type === "JCB" ? (
             <View style={styles.tableRow}>
               <View style={{ width: "40%" }}>
-                <Text style={styles.tableCellDesc}>JCB Excavation Work</Text>
+                <Text style={styles.tableCellDesc}>
+                  {workDetails.workType === "TALI_LOADING"
+                    ? "JCB Tali Loading (ट्रॉली लोडिंग)"
+                    : workDetails.workType === "TRACK_LOADING"
+                    ? "JCB Track Loading (ट्रक लोडिंग)"
+                    : "JCB Excavation Work (खुदाई)"}
+                </Text>
               </View>
               <Text style={[styles.tableCell, { width: "15%", textAlign: "center" }]}>-</Text>
-              <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{`${workDetails.totalHours} Hrs`}</Text>
-              <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{workDetails.ratePerHour?.toFixed(2)}</Text>
-              <Text style={[styles.tableCell, { width: "15%", textAlign: "right", fontWeight: "bold" }]}>
-                {((workDetails.totalHours || 0) * (workDetails.ratePerHour || 0)).toFixed(2)}
-              </Text>
+              {workDetails.pricingMethod === "TRIP" ? (
+                <>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{`${workDetails.tripCount || 0} Trips`}</Text>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{(workDetails.ratePerTrip || 0).toFixed(2)}</Text>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right", fontWeight: "bold" }]}>
+                    {((workDetails.tripCount || 0) * (workDetails.ratePerTrip || 0)).toFixed(2)}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{`${workDetails.totalHours || 0} Hrs`}</Text>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right" }]}>{(workDetails.ratePerHour || 0).toFixed(2)}</Text>
+                  <Text style={[styles.tableCell, { width: "15%", textAlign: "right", fontWeight: "bold" }]}>
+                    {((workDetails.totalHours || 0) * (workDetails.ratePerHour || 0)).toFixed(2)}
+                  </Text>
+                </>
+              )}
             </View>
           ) : (
             <>

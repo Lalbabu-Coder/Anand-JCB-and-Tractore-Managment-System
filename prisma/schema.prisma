@@ -90,10 +90,10 @@ model JCBWork {
   machineId        String
   machine          Machine  @relation(fields: [machineId], references: [id])
   date             DateTime @default(now())
-  startTime        DateTime
-  endTime          DateTime
-  totalHours       Float
-  ratePerHour      Float
+  startTime        DateTime?
+  endTime          DateTime?
+  totalHours       Float    @default(0)
+  ratePerHour      Float    @default(0)
   totalAmount      Float
   dieselCost       Float    @default(0)
   operatorName     String
@@ -101,6 +101,10 @@ model JCBWork {
   remainingBalance Float
   notes            String?
   pdfUrl           String?
+  workType         String   @default("HOURLY") // HOURLY, TALI_LOADING, TRACK_LOADING
+  pricingMethod    String   @default("HOURLY") // HOURLY, TRIP
+  tripCount        Int      @default(0)
+  ratePerTrip      Float    @default(0)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }

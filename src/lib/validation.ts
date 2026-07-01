@@ -18,13 +18,56 @@ export const jcbWorkSchema = z.object({
   customerId: z.string().min(1, "Customer is required"),
   machineId: z.string().min(1, "Machine is required"),
   date: z.string().min(1, "Date is required"),
-  startTime: z.string().min(1, "Start time is required"),
-  endTime: z.string().min(1, "End time is required"),
-  ratePerHour: z.coerce.number().min(1, "Rate per hour must be positive"),
+  workType: z.enum(["HOURLY", "TALI_LOADING", "TRACK_LOADING"]).default("HOURLY"),
+  pricingMethod: z.enum(["HOURLY", "TRIP"]).default("HOURLY"),
+  startTime: z.string().optional().or(z.literal("")),
+  endTime: z.string().optional().or(z.literal("")),
+  ratePerHour: z.coerce.number().optional().default(0),
+  tripCount: z.coerce.number().optional().default(0),
+  ratePerTrip: z.coerce.number().optional().default(0),
   dieselCost: z.coerce.number().min(0, "Diesel cost must be zero or positive"),
   operatorName: z.string().min(2, "Operator name is required"),
   advancePaid: z.coerce.number().min(0, "Advance paid must be zero or positive"),
   notes: z.string().optional().or(z.literal("")),
+}).superRefine((data, ctx) => {
+  if (data.pricingMethod === "HOURLY") {
+    if (!data.startTime) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Start time is required for hourly billing",
+        path: ["startTime"],
+      });
+    }
+    if (!data.endTime) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "End time is required for hourly billing",
+        path: ["endTime"],
+      });
+    }
+    if (data.ratePerHour === undefined || data.ratePerHour <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rate per hour must be positive",
+        path: ["ratePerHour"],
+      });
+    }
+  } else if (data.pricingMethod === "TRIP") {
+    if (data.tripCount === undefined || data.tripCount <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Trip count must be positive",
+        path: ["tripCount"],
+      });
+    }
+    if (data.ratePerTrip === undefined || data.ratePerTrip <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rate per trip/trolley must be positive",
+        path: ["ratePerTrip"],
+      });
+    }
+  }
 });
 
 export const tractorOperationSchema = z.object({

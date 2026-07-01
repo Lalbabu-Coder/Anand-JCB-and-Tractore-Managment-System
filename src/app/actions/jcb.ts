@@ -25,11 +25,23 @@ export async function createJcbWork(data: any) {
   const validated = jcbWorkSchema.parse(data);
 
   // 1. Calculate hours and totals
-  const start = new Date(validated.startTime);
-  const end = new Date(validated.endTime);
-  const totalHours = Math.max(0.1, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+  let totalHours = 0;
+  let start: Date | null = null;
+  let end: Date | null = null;
+  let totalAmount = 0;
+
+  if (validated.pricingMethod === "HOURLY") {
+    start = validated.startTime ? new Date(validated.startTime) : null;
+    end = validated.endTime ? new Date(validated.endTime) : null;
+    if (start && end) {
+      totalHours = Math.max(0.1, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+    }
+    totalAmount = Math.round(totalHours * (validated.ratePerHour || 0));
+  } else {
+    // TRIP billing
+    totalAmount = Math.round((validated.tripCount || 0) * (validated.ratePerTrip || 0));
+  }
   
-  const totalAmount = Math.round(totalHours * validated.ratePerHour);
   const remainingBalance = Math.max(0, totalAmount - validated.advancePaid);
 
   try {
@@ -47,13 +59,17 @@ export async function createJcbWork(data: any) {
         startTime: start,
         endTime: end,
         totalHours,
-        ratePerHour: validated.ratePerHour,
+        ratePerHour: validated.ratePerHour || 0,
         totalAmount,
         dieselCost: validated.dieselCost,
         operatorName: validated.operatorName,
         advancePaid: validated.advancePaid,
         remainingBalance,
         notes: validated.notes || null,
+        workType: validated.workType,
+        pricingMethod: validated.pricingMethod,
+        tripCount: validated.tripCount || 0,
+        ratePerTrip: validated.ratePerTrip || 0,
       },
     });
 
@@ -79,17 +95,23 @@ export async function createJcbWork(data: any) {
     let waSent = false;
     let smsError = "";
 
-    const rawTemplate = smsTemplateSetting?.value || 
-      "Namaste {customerName},\nYour JCB work has been completed.\nHours: {hours}\nRate: ₹{rate}/hour\nTotal: ₹{total}\nAdvance: ₹{advance}\nRemaining: ₹{remaining}\nThank you.";
+    let smsBody = "";
+    if (validated.pricingMethod === "HOURLY") {
+      const rawTemplate = smsTemplateSetting?.value || 
+        "Namaste {customerName},\nYour JCB work has been completed.\nHours: {hours}\nRate: ₹{rate}/hour\nTotal: ₹{total}\nAdvance: ₹{advance}\nRemaining: ₹{remaining}\nThank you.";
 
-    const smsBody = parseTemplate(rawTemplate, {
-      customerName: customer.name,
-      hours: totalHours.toFixed(1),
-      rate: validated.ratePerHour,
-      total: totalAmount,
-      advance: validated.advancePaid,
-      remaining: remainingBalance,
-    });
+      smsBody = parseTemplate(rawTemplate, {
+        customerName: customer.name,
+        hours: totalHours.toFixed(1),
+        rate: validated.ratePerHour || 0,
+        total: totalAmount,
+        advance: validated.advancePaid,
+        remaining: remainingBalance,
+      });
+    } else {
+      const workLabel = validated.workType === "TALI_LOADING" ? "Tali Loading (ट्रॉली लोडिंग)" : "Track Loading (ट्रक लोडिंग)";
+      smsBody = `Namaste ${customer.name},\nYour JCB ${workLabel} work has been completed.\nTrips: ${validated.tripCount}\nRate: ₹${validated.ratePerTrip}/Trip\nTotal: ₹${totalAmount}\nAdvance: ₹${validated.advancePaid}\nRemaining: ₹${remainingBalance}\nThank you - Anand JCB & Tractor.`;
+    }
 
     // Save outbound SMS notification record
     const smsNotify = await prisma.notification.create({

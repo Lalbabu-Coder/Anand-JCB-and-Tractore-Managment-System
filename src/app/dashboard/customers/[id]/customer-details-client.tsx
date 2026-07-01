@@ -234,13 +234,21 @@ export function CustomerDetailsClient({
                   <div>
                     <div className="flex items-center gap-3">
                       <h4 className="text-base font-bold text-white tracking-tight">
-                        {item.itemType === "JCB" ? "JCB Excavator Work" : `Tractor - ${item.workType.replace(/_/g, " ")}`}
+                        {item.itemType === "JCB" 
+                          ? `JCB - ${
+                              item.workType === "TALI_LOADING" 
+                                ? "Tali Loading" 
+                                : item.workType === "TRACK_LOADING" 
+                                ? "Track Loading" 
+                                : "Excavation"
+                            }` 
+                          : `Tractor - ${item.workType.replace(/_/g, " ")}`}
                       </h4>
                       <span className="text-[10px] font-bold tracking-wider text-zinc-500 uppercase bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-800">
                         {new Date(item.date).toLocaleDateString()}
                       </span>
                     </div>
-
+ 
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-2 text-xs text-zinc-400">
                       <div>
                         <span className="text-zinc-600 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Operator</span> 
@@ -249,12 +257,21 @@ export function CustomerDetailsClient({
                       {item.itemType === "JCB" ? (
                         <>
                           <div>
-                            <span className="text-zinc-600 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Duration</span> 
-                            <span className="font-medium text-zinc-300">{item.totalHours.toFixed(1)} hrs</span>
+                            <span className="text-zinc-600 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Billing</span> 
+                            <span className="font-medium text-zinc-300">
+                              {item.pricingMethod === "TRIP" 
+                                ? `${item.tripCount || 0} Trips` 
+                                : `${(item.totalHours || 0).toFixed(1)} hrs`}
+                            </span>
                           </div>
                           <div>
-                            <span className="text-zinc-600 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Hourly Rate</span> 
-                            <span className="font-medium text-zinc-300">₹{item.ratePerHour}</span>
+                            <span className="text-zinc-600 font-bold uppercase tracking-wider text-[10px] block mb-0.5">Rate</span> 
+                            <span className="font-medium text-zinc-300">
+                              ₹{item.pricingMethod === "TRIP" 
+                                ? (item.ratePerTrip || 0) 
+                                : (item.ratePerHour || 0)}
+                              {item.pricingMethod === "TRIP" ? " / Trip" : " / hr"}
+                            </span>
                           </div>
                         </>
                       ) : (

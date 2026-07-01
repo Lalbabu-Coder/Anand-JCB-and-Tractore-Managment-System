@@ -31,6 +31,10 @@ interface JCBWorkLog {
   customer: { name: string; village: string };
   machine: { name: string };
   pdfUrl?: string | null;
+  workType?: string;
+  pricingMethod?: string;
+  tripCount?: number;
+  ratePerTrip?: number;
 }
 
 interface JCBClientProps {
@@ -60,6 +64,7 @@ export function JCBClient({
     handleSubmit,
     watch,
     reset,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(jcbWorkSchema),
@@ -74,62 +79,94 @@ export function JCBClient({
       operatorName: currentUserName,
       advancePaid: 0,
       notes: "",
+      workType: "HOURLY",
+      pricingMethod: "HOURLY",
+      tripCount: 0,
+      ratePerTrip: 0,
     },
   });
 
+  const watchWorkType = watch("workType");
+  const watchPricingMethod = watch("pricingMethod");
   const watchStartTime = watch("startTime");
   const watchEndTime = watch("endTime");
   const watchRate = watch("ratePerHour");
   const watchAdvance = watch("advancePaid");
+  const watchTripCount = watch("tripCount");
+  const watchRatePerTrip = watch("ratePerTrip");
 
   const [hours, setHours] = useState(0);
   const [total, setTotal] = useState(0);
   const [balance, setBalance] = useState(0);
 
+  // Set default pricingMethod to HOURLY if workType is HOURLY
+  useEffect(() => {
+    if (watchWorkType === "HOURLY") {
+      setValue("pricingMethod", "HOURLY");
+    }
+  }, [watchWorkType, setValue]);
+
   // Auto-update calculations on form inputs
   useEffect(() => {
-    if (watchStartTime && watchEndTime) {
-      const start = new Date(`2000-01-01T${watchStartTime}`);
-      const end = new Date(`2000-01-01T${watchEndTime}`);
-      let diffMs = end.getTime() - start.getTime();
+    if (watchPricingMethod === "HOURLY") {
+      if (watchStartTime && watchEndTime) {
+        const start = new Date(`2000-01-01T${watchStartTime}`);
+        const end = new Date(`2000-01-01T${watchEndTime}`);
+        let diffMs = end.getTime() - start.getTime();
 
-      // Handle overnight shift if endTime is earlier than startTime
-      if (diffMs < 0) {
-        diffMs += 24 * 60 * 60 * 1000;
+        // Handle overnight shift if endTime is earlier than startTime
+        if (diffMs < 0) {
+          diffMs += 24 * 60 * 60 * 1000;
+        }
+
+        const calculatedHours = Number((diffMs / (1000 * 60 * 60)).toFixed(2));
+        setHours(calculatedHours);
+
+        const calculatedTotal = Math.round(calculatedHours * (Number(watchRate) || 0));
+        setTotal(calculatedTotal);
+
+        setBalance(Math.max(0, calculatedTotal - (Number(watchAdvance) || 0)));
+      } else {
+        setHours(0);
+        setTotal(0);
+        setBalance(0);
       }
-
-      const calculatedHours = Number((diffMs / (1000 * 60 * 60)).toFixed(2));
-      setHours(calculatedHours);
-
-      const calculatedTotal = Math.round(calculatedHours * (Number(watchRate) || 0));
-      setTotal(calculatedTotal);
-
-      setBalance(Math.max(0, calculatedTotal - (Number(watchAdvance) || 0)));
     } else {
+      // TRIP billing
       setHours(0);
-      setTotal(0);
-      setBalance(0);
+      const calculatedTotal = Math.round((Number(watchTripCount) || 0) * (Number(watchRatePerTrip) || 0));
+      setTotal(calculatedTotal);
+      setBalance(Math.max(0, calculatedTotal - (Number(watchAdvance) || 0)));
     }
-  }, [watchStartTime, watchEndTime, watchRate, watchAdvance]);
+  }, [watchPricingMethod, watchStartTime, watchEndTime, watchRate, watchAdvance, watchTripCount, watchRatePerTrip]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleFormSubmit = async (data: any) => {
     setFormError(null);
     setSuccessInfo(null);
 
-    // Parse specific date into start/end times
-    const dateStr = data.date;
-    data.startTime = `${dateStr}T${data.startTime}:00`;
-    
-    // Check if end time spans into next day
-    const isOvernight = data.endTime < watch("startTime");
-    let endDate = dateStr;
-    if (isOvernight) {
-      const tomorrow = new Date(dateStr);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      endDate = tomorrow.toISOString().split("T")[0];
+    if (data.pricingMethod === "HOURLY") {
+      // Parse specific date into start/end times
+      const dateStr = data.date;
+      data.startTime = `${dateStr}T${data.startTime}:00`;
+      
+      // Check if end time spans into next day
+      const isOvernight = data.endTime < (watch("startTime") || "");
+      let endDate = dateStr;
+      if (isOvernight) {
+        const tomorrow = new Date(dateStr);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        endDate = tomorrow.toISOString().split("T")[0];
+      }
+      data.endTime = `${endDate}T${data.endTime}:00`;
+      data.tripCount = 0;
+      data.ratePerTrip = 0;
+    } else {
+      // Trip billing - reset hourly fields
+      data.startTime = "";
+      data.endTime = "";
+      data.ratePerHour = 0;
     }
-    data.endTime = `${endDate}T${data.endTime}:00`;
 
     const res = await createJcbWork(data);
 
@@ -149,6 +186,10 @@ export function JCBClient({
         operatorName: currentUserName,
         advancePaid: 0,
         notes: "",
+        workType: "HOURLY",
+        pricingMethod: "HOURLY",
+        tripCount: 0,
+        ratePerTrip: 0,
       });
       router.refresh();
     } else {
@@ -248,45 +289,115 @@ export function JCBClient({
 
           <div className="grid grid-cols-2 gap-5">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Start Time</label>
-              <input
-                type="time"
-                {...register("startTime")}
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Work Type</label>
+              <select
+                {...register("workType")}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
-              />
-              {errors.startTime && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.startTime.message}</p>}
+              >
+                <option value="HOURLY" className="bg-zinc-950">Hourly Excavation</option>
+                <option value="TALI_LOADING" className="bg-zinc-950">Tali Loading</option>
+                <option value="TRACK_LOADING" className="bg-zinc-950">Track Loading</option>
+              </select>
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">End Time</label>
-              <input
-                type="time"
-                {...register("endTime")}
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Billing Method</label>
+              <select
+                {...register("pricingMethod")}
                 className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
-              />
-              {errors.endTime && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.endTime.message}</p>}
+                disabled={watchWorkType === "HOURLY"}
+              >
+                <option value="HOURLY" className="bg-zinc-950">Billed by Hours</option>
+                {watchWorkType !== "HOURLY" && (
+                  <option value="TRIP" className="bg-zinc-950">Billed by Trip/Count</option>
+                )}
+              </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-5">
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Rate / Hour</label>
-              <input
-                type="number"
-                {...register("ratePerHour")}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
-              />
-              {errors.ratePerHour && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.ratePerHour.message}</p>}
-            </div>
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Diesel Cost (₹)</label>
-              <input
-                type="number"
-                {...register("dieselCost")}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
-              />
-              {errors.dieselCost && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.dieselCost.message}</p>}
-            </div>
-          </div>
+          {watchPricingMethod === "HOURLY" ? (
+            <>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Start Time</label>
+                  <input
+                    type="time"
+                    {...register("startTime")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.startTime && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.startTime.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">End Time</label>
+                  <input
+                    type="time"
+                    {...register("endTime")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.endTime && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.endTime.message}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Rate / Hour (₹)</label>
+                  <input
+                    type="number"
+                    {...register("ratePerHour")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.ratePerHour && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.ratePerHour.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Diesel Cost (₹)</label>
+                  <input
+                    type="number"
+                    {...register("dieselCost")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.dieselCost && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.dieselCost.message}</p>}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                    {watchWorkType === "TALI_LOADING" ? "Trolley Count" : "Trip Count"}
+                  </label>
+                  <input
+                    type="number"
+                    {...register("tripCount")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.tripCount && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.tripCount.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">
+                    Rate per {watchWorkType === "TALI_LOADING" ? "Trolley" : "Trip"} (₹)
+                  </label>
+                  <input
+                    type="number"
+                    {...register("ratePerTrip")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.ratePerTrip && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.ratePerTrip.message}</p>}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-500 mb-1.5">Diesel Cost (₹)</label>
+                  <input
+                    type="number"
+                    {...register("dieselCost")}
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-900/50 p-3.5 text-sm text-white outline-none transition-all hover:border-zinc-700 focus:border-violet-500 focus:bg-zinc-900 focus:ring-4 focus:ring-violet-500/10"
+                  />
+                  {errors.dieselCost && <p className="mt-1.5 text-xs font-medium text-red-400">{errors.dieselCost.message}</p>}
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="grid grid-cols-2 gap-5">
             <div>
@@ -361,7 +472,7 @@ export function JCBClient({
                 <tr className="border-b border-zinc-900/50 text-zinc-500 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="pb-4 px-4">Customer</th>
                   <th className="pb-4 px-4">Date</th>
-                  <th className="pb-4 px-4">Hours</th>
+                  <th className="pb-4 px-4">Qty / Duration</th>
                   <th className="pb-4 px-4 text-right">Total (₹)</th>
                   <th className="pb-4 px-4 text-right">Advance (₹)</th>
                   <th className="pb-4 px-4 text-right">Balance (₹)</th>
@@ -374,10 +485,16 @@ export function JCBClient({
                   <tr key={log.id} className="transition-colors hover:bg-zinc-800/30 group">
                     <td className="py-4 px-4 rounded-l-xl">
                       <span className="font-bold text-white">{log.customer.name}</span>
-                      <p className="text-[10px] text-zinc-500 font-medium">{log.customer.village}</p>
+                      <p className="text-[10px] text-zinc-500 font-medium">
+                        {log.customer.village} • {log.workType === "TALI_LOADING" ? "Tali Loading" : log.workType === "TRACK_LOADING" ? "Track Loading" : "Excavation"}
+                      </p>
                     </td>
                     <td className="py-4 px-4 text-xs font-semibold text-zinc-400">{new Date(log.date).toLocaleDateString()}</td>
-                    <td className="py-4 px-4 text-xs font-bold text-violet-400">{log.totalHours.toFixed(1)} hrs</td>
+                    <td className="py-4 px-4 text-xs font-bold text-violet-400">
+                      {log.pricingMethod === "TRIP" 
+                        ? `${log.tripCount} Trips` 
+                        : `${log.totalHours.toFixed(1)} hrs`}
+                    </td>
                     <td className="py-4 px-4 text-right font-bold text-white">₹{log.totalAmount.toLocaleString()}</td>
                     <td className="py-4 px-4 text-right font-medium text-emerald-500">₹{log.advancePaid.toLocaleString()}</td>
                     <td className="py-4 px-4 text-right font-bold text-amber-500">₹{log.remainingBalance.toLocaleString()}</td>
